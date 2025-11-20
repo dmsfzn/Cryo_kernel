@@ -32,4 +32,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Kernel-Installer
-        path: /home/runner/android/Anykernel3/*.zip
+        # Ubah path menjadi folder android (satu level di atas Anykernel3)
+        path: /home/runner/android/*.zip
