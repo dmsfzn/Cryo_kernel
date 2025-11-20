@@ -247,6 +247,8 @@ package_kernel() {
         # --- PERBAIKAN UTAMA DI SINI ---
         # Pindahkan file ZIP dari folder $HOME/android ke folder kerja saat ini (Repository Root)
         mv "../$zip_name" "$GITHUB_WORKSPACE/$zip_name" 2>/dev/null || mv "../$zip_name" "../../$zip_name"
+        echo "Sending build to Telegram..."
+        push_to_telegram "../$zip_name" "Build Selesai: $zip_name"
         
         cd - || exit 1
         
