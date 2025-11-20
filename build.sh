@@ -158,6 +158,34 @@ clean_output() {
     echo "Output directory cleaned."
 }
 
+# Fungsi Kirim ke Telegram
+push_to_telegram() {
+    local file_path="$1"
+    local caption="$2"
+    
+    # Cek apakah Token dan Chat ID ada
+    if [[ -z "$TG_TOKEN" || -z "$TG_CHAT_ID" ]]; then
+        echo "Telegram Token or Chat ID not set. Skipping upload."
+        return
+    fi
+
+    if [[ -f "$file_path" ]]; then
+        echo "Uploading to Telegram..."
+        curl -F chat_id="${TG_CHAT_ID}" \
+             -F document=@"${file_path}" \
+             -F caption="${caption}" \
+             "https://api.telegram.org/bot${TG_TOKEN}/sendDocument" > /dev/null 2>&1
+        
+        if [[ $? -eq 0 ]]; then
+            echo "Upload successful!"
+        else
+            echo "Upload failed!"
+        fi
+    else
+        echo "File to upload not found: $file_path"
+    fi
+}
+
 # Function to set up output directory and build kernel using a make command stored in an array
 setup_and_compile() {
     mkdir -p out
