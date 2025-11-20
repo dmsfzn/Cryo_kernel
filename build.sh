@@ -205,16 +205,30 @@ package_kernel() {
     zip_name=$(get_zip_name)
   
     if [[ -d "$AK3_DIR" ]]; then
+        # Copy Image.gz-dtb dan dtbo.img ke folder AnyKernel3
         cp out/arch/arm64/boot/Image.gz-dtb "$AK3_DIR"
         cp out/arch/arm64/boot/dtbo.img "$AK3_DIR"
+        
+        # Masuk ke direktori AnyKernel3
         cd "$AK3_DIR" || { echo "Failed to enter AnyKernel3 directory!"; exit 1; }
         
+        # ZIP isinya
+        echo "Zipping kernel..."
         zip -r9 "../$zip_name" * -x '*.git*' README.md *placeholder
+        
+        # --- PERBAIKAN UTAMA DI SINI ---
+        # Pindahkan file ZIP dari folder $HOME/android ke folder kerja saat ini (Repository Root)
+        mv "../$zip_name" "$GITHUB_WORKSPACE/$zip_name" 2>/dev/null || mv "../$zip_name" "../../$zip_name"
+        
         cd - || exit 1
         
         rm -rf out/arch/arm64/boot
         echo -e "\nKernel packaged successfully as: $zip_name"
-        end_timer  # End the timer and display elapsed time
+        
+        # Debugging: Tampilkan lokasi file sekarang
+        ls -l "$zip_name"
+        
+        end_timer
     else
         echo "AnyKernel3 directory not found!"
         exit 1
