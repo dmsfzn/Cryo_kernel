@@ -1,1 +1,43 @@
+name: Build Kernel with Script
 
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Agar bisa dijalankan manual
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # Langkah 1: Install Dependencies
+    # Meskipun Anda punya build.sh, Runner Ubuntu di GitHub masih "polos".
+    # Kita perlu menginstall tool dasar agar script Anda tidak error "command not found".
+    - name: Setup Build Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential bc kmod cpio flex libncurses5-dev \
+        libelf-dev libssl-dev dwarves bison git \
+        gcc-aarch64-linux-gnu # Hapus ini jika script Anda sudah download toolchain sendiri
+
+    # Langkah 2: Eksekusi Script
+    - name: Run Build Script
+      run: |
+        chmod +x build.sh
+        ./build.sh
+
+    # Langkah 3: Upload Hasil
+    # Pastikan 'path' di bawah sesuai dengan tempat output script Anda menyimpan file
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Kernel-Result
+        path: |
+          out/arch/arm64/boot/Image.gz
+          out/arch/arm64/boot/dtbo.img
+          AnyKernel3/*.zip
