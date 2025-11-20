@@ -26,11 +26,18 @@ jobs:
         chmod +x build.sh
         # Jalankan dengan opsi --get-ksu untuk update KSU Next
         ./build.sh --get-ksu
+    
+    - name: Check Output Files (Debug)
+      run: |
+        echo "Listing current directory files:"
+        ls -la
+        echo "Listing android directory (just in case):"
+        ls -R /home/runner/android || echo "Android dir not found"
 
     - name: Upload Artifact
       if: success()
       uses: actions/upload-artifact@v4
       with:
         name: Kernel-Installer
-        # Ubah path menjadi folder android (satu level di atas Anykernel3)
-        path: /home/runner/android/*.zip
+        # Cukup gunakan *.zip karena file sudah dipindah ke root oleh script di atas
+        path: ./*.zip
