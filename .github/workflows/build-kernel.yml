@@ -1,43 +1,34 @@
-name: Build Kernel with Script
+name: Build Kernel Ginkgo
 
 on:
+  workflow_dispatch: # Tombol manual trigger
   push:
-    branches: [ "main", "master" ]
-  workflow_dispatch: # Agar bisa dijalankan manual
+    branches: [ main ]
 
 jobs:
-  build:
+  build-kernel:
     runs-on: ubuntu-latest
-
+    
     steps:
-    - name: Checkout Repository
+    - name: Checkout Repo
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    # Langkah 1: Install Dependencies
-    # Meskipun Anda punya build.sh, Runner Ubuntu di GitHub masih "polos".
-    # Kita perlu menginstall tool dasar agar script Anda tidak error "command not found".
-    - name: Setup Build Environment
+    - name: Setup Dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential bc kmod cpio flex libncurses5-dev \
-        libelf-dev libssl-dev dwarves bison git \
-        gcc-aarch64-linux-gnu # Hapus ini jika script Anda sudah download toolchain sendiri
+        sudo apt update
+        sudo apt install -y bc bison build-essential ccall ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
 
-    # Langkah 2: Eksekusi Script
     - name: Run Build Script
       run: |
         chmod +x build.sh
-        ./build.sh
+        # Jalankan dengan opsi --get-ksu untuk update KSU Next
+        ./build.sh --get-ksu
 
-    # Langkah 3: Upload Hasil
-    # Pastikan 'path' di bawah sesuai dengan tempat output script Anda menyimpan file
     - name: Upload Artifact
+      if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: Kernel-Result
-        path: |
-          out/arch/arm64/boot/Image.gz
-          out/arch/arm64/boot/dtbo.img
-          AnyKernel3/*.zip
+        name: Kernel-Installer
+        path: /home/runner/android/Anykernel3/*.zip
