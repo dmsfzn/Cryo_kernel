@@ -1,16 +1,51 @@
 #!/bin/bash
 
-# Paths and configurations
+#!/bin/bash
+
+# --- Auto-Download Toolchain Logic ---
+# Mendeteksi jika berjalan di GitHub Actions atau folder toolchain tidak ada
+if [ ! -d "$HOME/android/toolchains" ]; then
+    echo "Toolchains not found! Preparing to download..."
+    mkdir -p $HOME/android/toolchains
+    mkdir -p $HOME/android/Anykernel3
+
+    # 1. Download AOSP Clang (Contoh: versi r450784d, sesuaikan jika perlu)
+    if [ ! -d "$HOME/android/toolchains/aosp-clang" ]; then
+        echo "Downloading Clang..."
+        wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r450784d.tar.gz -O clang.tar.gz
+        mkdir -p $HOME/android/toolchains/aosp-clang
+        tar -xf clang.tar.gz -C $HOME/android/toolchains/aosp-clang
+        rm clang.tar.gz
+    fi
+
+    # 2. Download GCC 64 (Aarch64)
+    if [ ! -d "$HOME/android/toolchains/llvm-arm64" ]; then
+        echo "Downloading GCC 64..."
+        git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git $HOME/android/toolchains/llvm-arm64
+    fi
+
+    # 3. Download GCC 32 (Arm)
+    if [ ! -d "$HOME/android/toolchains/llvm-arm" ]; then
+        echo "Downloading GCC 32..."
+        git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git $HOME/android/toolchains/llvm-arm
+    fi
+
+    # 4. Download AnyKernel3 (Wajib ada karena dipanggil di package_kernel)
+    if [ -z "$(ls -A $HOME/android/Anykernel3)" ]; then
+        echo "Downloading AnyKernel3..."
+        # Ganti URL ini dengan repo AnyKernel3 khusus device Anda (Ginkgo)
+        git clone https://github.com/osm0sis/AnyKernel3.git $HOME/android/Anykernel3
+    fi
+fi
+
+# --- Original Variable Definitions (Sekarang Aman) ---
 TC_DIR="$HOME/android/toolchains/aosp-clang"
 GCC_64_DIR="$HOME/android/toolchains/llvm-arm64"
 GCC_32_DIR="$HOME/android/toolchains/llvm-arm"
 AK3_DIR="$HOME/android/Anykernel3"
 DEFCONFIG="vendor/ginkgo-perf_defconfig"
 
-# Export build metadata
-export PATH="$TC_DIR/bin:$PATH"
-export KBUILD_BUILD_USER=lyahi
-export KBUILD_BUILD_HOST=idut
+# ... sisa script ke bawah tetap sama ...
 
 # Function to handle script cleanup on exit or interrupt
 cleanup() {
@@ -77,30 +112,35 @@ get_zip_name() {
 
 # Function to download and set up KernelSU, apply patch and modify defconfig
 set_kernelsu() {
-    echo "Downloading and setting up KernelSU..."
-    curl -kLSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
+    echo "Downloading and setting up KernelSU-Next (Latest)..."
+    
+    # Menggunakan repo rifsxd (KernelSU-Next) branch 'next'
+    curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
+    
     if [[ $? -eq 0 ]]; then
-        echo "KernelSU downloaded and set up successfully."
+        echo "KernelSU-Next downloaded and set up successfully."
         
-        if [[ -d "KernelSU" ]]; then
-            # Apply KernelSU hook patch
-            echo "Applying KernelSU-hook.patch..."
+        # KernelSU-Next mungkin membuat folder bernama 'KernelSU' atau 'KernelSU-Next'
+        if [[ -d "KernelSU" ]] || [[ -d "KernelSU-Next" ]]; then
+            
+            # Cek dan apply patch manual hanya jika file patch ada
             if [[ -f "ksu_hook.patch" ]]; then
-                git apply ksu_hook.patch
-                echo "Patch applied successfully."
-            else
-                echo "Patch ksu_hook.patch not found!"
+                echo "Applying KernelSU-hook.patch..."
+                git apply ksu_hook.patch || echo "Patch failed or already applied, skipping..."
             fi
             
-            # Modify the defconfig to enable KernelSU
+            # Mengaktifkan CONFIG_KSU di defconfig
+            # Menangani dua kemungkinan default config (not set atau =n)
             echo "Enabling CONFIG_KSU in $DEFCONFIG..."
+            sed -i 's/# CONFIG_KSU is not set/CONFIG_KSU=y/g' "arch/arm64/configs/$DEFCONFIG"
             sed -i 's/CONFIG_KSU=n/CONFIG_KSU=y/g' "arch/arm64/configs/$DEFCONFIG"
+            
             echo "CONFIG_KSU enabled in $DEFCONFIG."
         else
             echo "KernelSU directory not found after download!"
         fi
     else
-        echo "Failed to download KernelSU."
+        echo "Failed to download KernelSU-Next."
         exit 1
     fi
 }
