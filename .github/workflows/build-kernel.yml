@@ -13,7 +13,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 1
     
     - name: Setup Dependencies
       run: |
@@ -26,6 +26,7 @@ jobs:
         chmod +x build.sh
         # Jalankan dengan opsi --get-ksu untuk update KSU Next
         ./build.sh --get-ksu
+        ./build.sh
     
     - name: Check Output Files (Debug)
       run: |
